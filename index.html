@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MissDollyKelly | Watermark</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Playfair+Display:ital,wght@1,700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #ff4b82;
+            --secondary: #a855f7;
+            --bg: #0a0a0c;
+            --panel: #16161a;
+            --text: #ffffff;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden; /* Evita rebote en iOS */
+        }
+
+        /* HEADER */
+        header {
+            padding: 15px;
+            text-align: center;
+            background: var(--panel);
+            border-bottom: 1px solid rgba(255, 75, 130, 0.3);
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            margin: 0;
+            background: linear-gradient(90deg, #ff4b82, #ffd700);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* CONTENEDOR PRINCIPAL */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            flex-direction: column; /* Móvil por defecto */
+        }
+
+        /* AREA DE FOTO (ARRIBA EN MOVIL) */
+        .preview-area {
+            flex: 1;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: auto;
+            padding: 10px;
+            position: relative;
+        }
+
+        #canvas {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            display: none; /* Se muestra solo cuando hay imagen */
+        }
+
+        .placeholder-text {
+            text-align: center;
+            color: #444;
+            border: 2px dashed #333;
+            padding: 40px;
+            border-radius: 15px;
+        }
+
+        /* PANEL DE CONTROLES (ABAJO EN MOVIL) */
+        .controls-panel {
+            background: var(--panel);
+            padding: 20px;
+            height: 45vh;
+            overflow-y: auto;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.5);
+        }
+
+        .control-group { margin-bottom: 15px; }
+
+        label {
+            display: block;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            color: #aaa;
+        }
+
+        input[type="text"], select {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            background: #222;
+            color: white;
+            font-size: 16px; /* Evita zoom automático en iPhone */
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            accent-color: var(--primary);
+            height: 25px;
+        }
+
+        .val-badge {
+            min-width: 45px;
+            background: var(--primary);
+            padding: 2px 6px;
+            border-radius: 5px;
+            font-size: 0.7rem;
+            text-align: center;
+        }
+
+        .btn-upload {
+            background: #333;
+            color: white;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            cursor: pointer;
+            border: 1px solid var(--primary);
+            display: block;
+            font-weight: bold;
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            width: 100%;
+            padding: 18px;
+            border-radius: 12px;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        /* ESCRITORIO (Pantallas grandes) */
+        @media (min-width: 768px) {
+            .main-container { flex-direction: row; }
+            .controls-panel { 
+                width: 380px; 
+                height: 100%; 
+                border-top-left-radius: 0;
+                border-top-right-radius: 0;
+                border-left: 1px solid #333;
+            }
+            .preview-area { padding: 40px; }
+        }
+
+        /* Estilo para color picker circular */
+        input[type="color"] {
+            width: 100%;
+            height: 40px;
+            border: none;
+            border-radius: 8px;
+            background: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>MissDollyKelly Studio</h1>
+    </header>
+
+    <div class="main-container">
+        <!-- ÁREA DE PREVISUALIZACIÓN -->
+        <div class="preview-area" id="dropZone">
+            <div class="placeholder-text" id="placeholder">
+                <p style="font-size: 2rem;">📸</p>
+                <p>Toca el botón inferior para cargar la foto</p>
+            </div>
+            <canvas id="canvas"></canvas>
+        </div>
+
+        <!-- PANEL DE HERRAMIENTAS -->
+        <div class="controls-panel">
+            
+            <label for="imageUpload" class="btn-upload">📁 SELECCIONAR IMAGEN</label>
+            <input type="file" id="imageUpload" accept="image/*" style="display:none">
+
+            <div class="control-group">
+                <label>Texto de Marca</label>
+                <input type="text" id="wm-text" value="@MissDollyKelly">
+            </div>
+
+            <div class="control-group">
+                <label>Color</label>
+                <input type="color" id="wm-color" value="#ffffff">
+            </div>
+
+            <div class="control-group">
+                <label>Transparencia</label>
+                <div class="slider-container">
+                    <input type="range" id="wm-opacity" min="0" max="1" step="0.05" value="0.3">
+                    <span class="val-badge" id="val-op">30%</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Tamaño de Letra</label>
+                <div class="slider-container">
+                    <input type="range" id="wm-size" min="10" max="250" value="60">
+                    <span class="val-badge" id="val-size">60px</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Separación</label>
+                <div class="slider-container">
+                    <input type="range" id="wm-gap" min="0.5" max="4" step="0.1" value="1.5">
+                    <span class="val-badge" id="val-gap">1.5x</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Inclinación</label>
+                <div class="slider-container">
+                    <input type="range" id="wm-rot" min="-90" max="90" value="-30">
+                    <span class="val-badge" id="val-rot">-30°</span>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Fuente</label>
+                <select id="wm-font">
+                    <option value="Playfair Display">Elegante (Playfair)</option>
+                    <option value="Montserrat">Moderno (Montserrat)</option>
+                    <option value="Arial">Simple (Arial)</option>
+                </select>
+            </div>
+
+            <button id="download" class="btn-download">GUARDAR FOTO</button>
+            <div style="height: 40px;"></div> <!-- Espacio extra para scroll -->
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const upload = document.getElementById('imageUpload');
+        const placeholder = document.getElementById('placeholder');
+        let mainImg = null;
+
+        // Función principal para dibujar
+        function draw() {
+            if (!mainImg) return;
+
+            // Mostrar canvas y ocultar placeholder
+            canvas.style.display = "block";
+            placeholder.style.display = "none";
+
+            // Definir tamaño real de la imagen
+            canvas.width = mainImg.width;
+            canvas.height = mainImg.height;
+
+            // Dibujar fondo
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(mainImg, 0, 0);
+
+            // Configuración de texto
+            const text = document.getElementById('wm-text').value || "@MissDollyKelly";
+            const size = parseInt(document.getElementById('wm-size').value);
+            const font = document.getElementById('wm-font').value;
+            const opacity = document.getElementById('wm-opacity').value;
+            const gapFactor = parseFloat(document.getElementById('wm-gap').value);
+            const rotation = parseInt(document.getElementById('wm-rot').value) * Math.PI / 180;
+
+            ctx.font = `bold ${size}px "${font}"`;
+            ctx.fillStyle = document.getElementById('wm-color').value;
+            ctx.globalAlpha = opacity;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+
+            // Medir texto para el mosaico
+            const metrics = ctx.measureText(text);
+            const textWidth = metrics.width;
+            const stepX = textWidth * gapFactor;
+            const stepY = size * (gapFactor * 2);
+
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.rotate(rotation);
+
+            // Cubrir un área mayor para que al rotar no queden huecos
+            const side = Math.max(canvas.width, canvas.height) * 2;
+            
+            for (let x = -side; x < side; x += stepX) {
+                for (let y = -side; y < side; y += stepY) {
+                    // Efecto ladrillo (offset)
+                    let rowOffset = (Math.round(y / stepY) % 2 === 0) ? 0 : stepX / 2;
+                    ctx.fillText(text, x + rowOffset, y);
+                }
+            }
+
+            ctx.restore();
+        }
+
+        // Manejo de carga de imagen
+        upload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                mainImg = new Image();
+                mainImg.onload = function() {
+                    draw();
+                };
+                mainImg.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Actualización en tiempo real de los controles
+        const allInputs = document.querySelectorAll('input, select');
+        allInputs.forEach(input => {
+            input.addEventListener('input', () => {
+                // Actualizar etiquetas de valor
+                if(document.getElementById('val-op')) 
+                    document.getElementById('val-op').textContent = Math.round(document.getElementById('wm-opacity').value * 100) + '%';
+                if(document.getElementById('val-size')) 
+                    document.getElementById('val-size').textContent = document.getElementById('wm-size').value + 'px';
+                if(document.getElementById('val-gap')) 
+                    document.getElementById('val-gap').textContent = document.getElementById('wm-gap').value + 'x';
+                if(document.getElementById('val-rot')) 
+                    document.getElementById('val-rot').textContent = document.getElementById('wm-rot').value + '°';
+                
+                draw();
+            });
+        });
+
+        // Descarga de imagen
+        document.getElementById('download').addEventListener('click', function() {
+            if (!mainImg) return alert("Primero selecciona una imagen");
+            
+            const link = document.createElement('a');
+            link.download = 'MissDollyKelly_Protegida.png';
+            link.href = canvas.toDataURL('image/png', 0.9);
+            link.click();
+        });
+
+        // Redibujar si cambian las fuentes
+        document.fonts.ready.then(draw);
+
+    </script>
+</body>
+</html>
